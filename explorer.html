@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Portal Dialogue Corpus - Data Explorer</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Import Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Papa Parse for fast client‑side CSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+    <div id="main">
+        <div id="header">
+            <h1>The Portal Dialogue Corpus</h1>
+            <div id="authors">
+                <ul>
+                    <li><a href="https://circlecly.github.io/">Circle Chen</a><sup>1</sup></li>
+                    <li><a href="https://www.linkedin.com/in/olivia-tingting-du/?locale=zh_CN">Tingting Du</a><sup>2</sup></li>
+                    <li><a href="https://seuneisape.github.io/">Seun Eisape</a><sup>2</sup></li>
+                    <li><a href="https://www.efleisig.com/">Eve Fleisig</a><sup>2</sup></li>
+                    <li><a href="https://www.linkedin.com/in/ellie-french-21133a277/">Ellie French</a><sup>2</sup></li>
+                    <li><a href="https://www.coli.uni-saarland.de/~koller/">Alexander Koller</a><sup>3</sup></li>
+                    <li><a href="https://www.linkedin.com/in/laura-ma-280406248/">Laura Ma</a><sup>2</sup></li>
+                    <li><a href="https://www.alanesuhr.com/">Alane Suhr</a><sup>2</sup></li>
+                    <li><a href="https://nickatomlin.github.io/">Nicholas Tomlin</a><sup>4</sup></li>
+                    <li><a href="https://www.linkedin.com/in/lauren-vinh-b19473217/">Lauren Vinh</a><sup>2</sup></li>
+                    <li><a href="https://teaywright.github.io/">Téa Wright</a><sup>2</sup></li>
+                    <li><a href="https://scholar.google.com/citations?user=LphJyswAAAAJ&hl=en">Tianjiao Zhang</a><sup>2</sup></li>
+                    <li><a href="https://naitian.org/">Naitian Zhou</a><sup>2</sup></li>
+                </ul>
+            </div>
+            <p><sup>1</sup> Meta &nbsp;&nbsp;&nbsp; <sup>2</sup> UC Berkeley &nbsp;&nbsp;&nbsp; <sup>3</sup> Saarland University &nbsp;&nbsp;&nbsp; <sup>4</sup> NYU</p>
+            <div id="links">
+                <div class="link">
+                    <a href="index.html"><i class="fas fa-home"></i> Home</a>
+                </div>
+                <div class="link">
+                    <a href="#"><i class="fas fa-file-alt"></i> Paper</a>
+                </div>
+                <div class="link">
+                    <a href="https://huggingface.co/datasets/Berkeley-NLP/portal2"><i class="fas fa-database"></i> Hugging Face</a>
+                </div>
+                <div class="link">
+                    <a href="explorer.html"><i class="fas fa-search"></i> Data Explorer</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-explorer-container">
+            <h2>Dialogue Data Explorer</h2>
+            
+            <div class="controls-row">
+                <label for="sessionSelect">Session:</label>
+                <select id="sessionSelect">
+                    <option value="">-- choose session --</option>
+                </select>
+
+                <label for="levelSelect">Level:</label>
+                <select id="levelSelect" disabled>
+                    <option value="">-- choose level --</option>
+                </select>
+
+                <div class="toggle-container">
+                    <span>Timeline View</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="viewToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <label for="searchInput">Search across all dialogues:</label>
+                <input type="text" id="searchInput" placeholder="Enter text or tags to search (e.g., 'hello', 'Query', 'utterance Type: query')..." style="width: 500px;">
+                <span id="searchResults"></span>
+            </div>
+
+            <div id="searchResultsList" class="search-results"></div>
+
+            <div id="utterances"></div>
+            
+            <div id="timelineContainer" class="timeline-container">
+                <div class="timeline-column blue" id="blueColumn"></div>
+                <div class="timeline-column orange" id="orangeColumn"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = [];
+        let currentSession = '';
+        let currentLevel = '';
+        let isTimelineView = false;
+        let activeTooltip = null;
+
+        // Custom tooltip functions
+        function createTooltip(text) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'custom-tooltip';
+            tooltip.textContent = text;
+            document.body.appendChild(tooltip);
+            return tooltip;
+        }
+
+        function positionTooltip(tooltip, target) {
+            const rect = target.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            let left = rect.left + (rect.width / 2);
+            let top = rect.top;
+
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            if (left < tooltipRect.width / 2) {
+                left = tooltipRect.width / 2;
+            } else if (left + (tooltipRect.width / 2) > viewportWidth) {
+                left = viewportWidth - (tooltipRect.width / 2);
+            }
+            
+            if (top < tooltipRect.height) {
+                top = rect.bottom + 8;
+                tooltip.style.transform = 'translateX(-50%) translateY(0)';
+            } else {
+                top = top;
+                tooltip.style.transform = 'translateX(-50%) translateY(-100%)';
+            }
+            
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+        }
+
+        function showTooltip(e) {
+            if (activeTooltip) {
+                activeTooltip.remove();
+            }
+            const text = e.target.getAttribute('title');
+            if (text) {
+                e.target.removeAttribute('title');
+                activeTooltip = createTooltip(text);
+                positionTooltip(activeTooltip, e.target);
+            }
+        }
+
+        function hideTooltip(e) {
+            if (activeTooltip) {
+                e.target.setAttribute('title', activeTooltip.textContent);
+                activeTooltip.remove();
+                activeTooltip = null;
+            }
+        }
+
+        function setupTooltipListeners(element) {
+            element.addEventListener('mouseenter', showTooltip);
+            element.addEventListener('mouseleave', hideTooltip);
+            let parent = element.parentElement;
+            while (parent) {
+                if (parent.scrollHeight > parent.clientHeight) {
+                    parent.addEventListener('scroll', () => {
+                        if (activeTooltip && activeTooltip.dataset.target === element) {
+                            positionTooltip(activeTooltip, element);
+                        }
+                    });
+                }
+                parent = parent.parentElement;
+            }
+        }
+
+        window.addEventListener('scroll', () => {
+            if (activeTooltip) {
+                const target = document.querySelector(`[title="${activeTooltip.textContent}"]`);
+                if (target) {
+                    positionTooltip(activeTooltip, target);
+                }
+            }
+        }, true);
+
+        window.addEventListener('resize', () => {
+            if (activeTooltip) {
+                const target = document.querySelector(`[title="${activeTooltip.textContent}"]`);
+                if (target) {
+                    positionTooltip(activeTooltip, target);
+                }
+            }
+        });
+
+        // Tag mapping for abbreviations
+        const tagMappings = {
+            'Success': { abbr: 'SUC', full: 'Communicative status: Success', category: 'comm' },
+            'Abandoned': { abbr: 'ABN', full: 'Communicative status: Abandoned', category: 'comm' },
+            'Correction': { abbr: 'COR', full: 'Communicative status: Correction', category: 'comm' },
+            'Uninterpretable': { abbr: 'UNI', full: 'Communicative status: Uninterpretable', category: 'comm' },
+            'Task-Related': { abbr: 'TSK', full: 'Information level: Task-Related', category: 'info' },
+            'Communication Management': { abbr: 'COM', full: 'Information level: Communication Management', category: 'info' },
+            'Affective Evaluation': { abbr: 'AFF', full: 'Information level: Affective Evaluation', category: 'info' },
+            'World State': { abbr: 'WLD', full: 'Information level: World State', category: 'info' },
+            'Not Enough Information': { abbr: 'NEI', full: 'Information level: Not Enough Information', category: 'info' },
+            'Hedging': { abbr: 'HED', full: 'Uncertainty: Hedging', category: 'unc' },
+            'Certainty': { abbr: 'CER', full: 'Uncertainty: Certainty', category: 'unc' },
+            'Non-Sentential / Listener Response': { abbr: 'NSL', full: 'Uncertainty: Non-Sentential / Listener Response', category: 'unc' },
+            'Imperative': { abbr: 'IMP', full: 'Uncertainty: Imperative', category: 'unc' },
+            'Proposition': { abbr: 'PRO', full: 'Utterance type: Proposition', category: 'utt' },
+            'Exclamation': { abbr: 'EXC', full: 'Utterance type: Exclamation', category: 'utt' },
+            'Query': { abbr: 'QRY', full: 'Utterance type: Query', category: 'utt' },
+            'Confirmation/Status Marker': { abbr: 'CSM', full: 'Discursive act: Confirmation/Status Marker', category: 'dis' },
+            'Speculation, Not Enough Information': { abbr: 'SNI', full: 'Discursive act: Speculation, Not Enough Information', category: 'dis' }
+        };
+
+        const categoryColors = {
+            'comm': { bg: 'rgba(255, 182, 193, 0.8)', text: '#8B0000' },
+            'info': { bg: 'rgba(173, 216, 230, 0.8)', text: '#00008B' },
+            'unc': { bg: 'rgba(144, 238, 144, 0.8)', text: '#006400' },
+            'utt': { bg: 'rgba(255, 218, 185, 0.8)', text: '#8B4513' },
+            'dis': { bg: 'rgba(221, 160, 221, 0.8)', text: '#4B0082' }
+        };
+
+        function toggleView() {
+            isTimelineView = !isTimelineView;
+            const toggleBtn = document.getElementById('viewToggle');
+            const utterancesDiv = document.getElementById('utterances');
+            const timelineDiv = document.getElementById('timelineContainer');
+            
+            if (isTimelineView) {
+                toggleBtn.checked = true;
+                utterancesDiv.style.display = 'none';
+                timelineDiv.classList.add('active');
+            } else {
+                toggleBtn.checked = false;
+                utterancesDiv.style.display = 'block';
+                timelineDiv.classList.remove('active');
+            }
+            
+            if (currentSession && currentLevel) {
+                displayUtterances(currentSession, currentLevel, document.getElementById('searchInput').value);
+            }
+        }
+
+        function timeToSeconds(t) {
+            if (!t) return 0;
+            const parts = t.split(':');
+            const secParts = parts[2].split('.');
+            return (+parts[0]) * 3600 + (+parts[1]) * 60 + (+secParts[0]) + (+(secParts[1] || 0)) / 1000;
+        }
+
+        function highlightSearchTerms(text, searchTerm) {
+            if (!searchTerm) return text;
+            // Escape special regex characters to treat them as literal text
+            const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+            return text.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
+        // Check if a tag matches the search term (searches in value, abbreviation, and full description)
+        function tagMatchesSearch(tagValue, searchTerm) {
+            if (!searchTerm) return false;
+            const searchLower = searchTerm.toLowerCase();
+            const tagInfo = getTagInfo(tagValue);
+            
+            const searchTargets = [
+                tagValue.toLowerCase(),
+                tagInfo ? tagInfo.abbr.toLowerCase() : '',
+                tagInfo ? tagInfo.full.toLowerCase() : ''
+            ];
+            
+            return searchTargets.some(target => target.includes(searchLower));
+        }
+
+        function getTagInfo(value) {
+            if (!value || value.trim() === '') return null;
+            
+            const cleanValue = value.replace(/^["']|["']$/g, '').trim();
+            
+            if (tagMappings[cleanValue]) {
+                return tagMappings[cleanValue];
+            }
+            
+            for (const [key, info] of Object.entries(tagMappings)) {
+                if (cleanValue.includes(key) || key.includes(cleanValue)) {
+                    return info;
+                }
+            }
+            
+            const words = cleanValue.split(' ');
+            const abbr = words.map(word => word.charAt(0).toUpperCase()).join('').substring(0, 3);
+            return { abbr, full: cleanValue, category: 'unknown' };
+        }
+
+        function getPreviewSnippet(utterance, searchTerm, maxLength = 100) {
+            if (!searchTerm) return utterance;
+            
+            const searchLower = searchTerm.toLowerCase();
+            const utteranceLower = utterance.toLowerCase();
+            const index = utteranceLower.indexOf(searchLower);
+            
+            if (index === -1) return utterance;
+            
+            const start = Math.max(0, index - 30);
+            const end = Math.min(utterance.length, index + searchTerm.length + 30);
+            
+            let snippet = utterance.substring(start, end);
+            
+            if (start > 0) snippet = '...' + snippet;
+            if (end < utterance.length) snippet = snippet + '...';
+            
+            return snippet;
+        }
+
+        function searchAcrossAllData(searchTerm) {
+            if (!searchTerm.trim()) {
+                return [];
+            }
+
+            const searchLower = searchTerm.toLowerCase();
+            const matches = new Map(); // Map to store (session, level) -> {count, snippets}
+
+            data.forEach(row => {
+                const utterance = row.utterance || '';
+                let hasMatch = false;
+                let matchSnippets = [];
+                
+                // Search in utterance text
+                if (utterance.toLowerCase().includes(searchLower)) {
+                    hasMatch = true;
+                    matchSnippets.push({
+                        type: 'text',
+                        content: getPreviewSnippet(utterance, searchTerm),
+                        label: 'Text'
+                    });
+                }
+                
+                // Search in tag fields
+                const tagFields = [
+                    { field: 'communicative_status', label: 'Communicative Status' },
+                    { field: 'information_level', label: 'Information Level' },
+                    { field: 'uncertainty', label: 'Uncertainty' },
+                    { field: 'utterance_type', label: 'Utterance Type' },
+                    { field: 'discursive_act', label: 'Discursive Act' }
+                ];
+                
+                tagFields.forEach(({field, label}) => {
+                    const tagValue = row[field] || '';
+                    const tagInfo = getTagInfo(tagValue);
+                    
+                    // Search in raw tag value, abbreviation, and full description
+                    const searchTargets = [
+                        tagValue.toLowerCase(),
+                        tagInfo ? tagInfo.abbr.toLowerCase() : '',
+                        tagInfo ? tagInfo.full.toLowerCase() : ''
+                    ];
+                    
+                    if (searchTargets.some(target => target.includes(searchLower))) {
+                        hasMatch = true;
+                        matchSnippets.push({
+                            type: 'tag',
+                            content: tagValue,
+                            label: label,
+                            abbr: tagInfo ? tagInfo.abbr : '',
+                            full: tagInfo ? tagInfo.full : tagValue
+                        });
+                    }
+                });
+                
+                if (hasMatch) {
+                    const key = `${row.session}-${row.level}`;
+                    if (!matches.has(key)) {
+                        matches.set(key, { count: 0, snippets: [] });
+                    }
+                    const match = matches.get(key);
+                    match.count++;
+                    match.snippets.push(...matchSnippets);
+                }
+            });
+
+            // Convert to array and sort by count (descending)
+            return Array.from(matches.entries())
+                .map(([key, matchData]) => {
+                    const [session, level] = key.split('-');
+                    return { 
+                        session, 
+                        level, 
+                        count: matchData.count,
+                        snippets: matchData.snippets.slice(0, 5) // Show up to 5 snippets to accommodate both text and tag matches
+                    };
+                })
+                .sort((a, b) => b.count - a.count);
+        }
+
+        function displaySearchResults(searchTerm) {
+            const container = document.getElementById('searchResultsList');
+            const resultsSpan = document.getElementById('searchResults');
+            const utterancesContainer = document.getElementById('utterances');
+            
+            if (!searchTerm.trim()) {
+                container.innerHTML = '';
+                resultsSpan.textContent = '';
+                utterancesContainer.innerHTML = '';
+                return;
+            }
+
+            const results = searchAcrossAllData(searchTerm);
+            
+            if (results.length === 0) {
+                container.innerHTML = '<p>No matches found.</p>';
+                resultsSpan.textContent = '';
+                utterancesContainer.innerHTML = '';
+                return;
+            }
+
+            resultsSpan.textContent = `Found ${results.length} session/level combinations with matches`;
+            
+            container.innerHTML = '<h3>Search Results:</h3>';
+            utterancesContainer.innerHTML = '';
+            
+            results.forEach(result => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                
+                let snippetsHtml = '';
+                if (result.snippets.length > 0) {
+                    snippetsHtml = '<div class="search-result-snippet">';
+                    
+                    // Group snippets by type to avoid duplication
+                    const textSnippets = result.snippets.filter(s => s.type === 'text');
+                    const tagSnippets = result.snippets.filter(s => s.type === 'tag');
+                    
+                    // Show text snippets
+                    if (textSnippets.length > 0) {
+                        snippetsHtml += '<div><strong>Text matches:</strong></div>';
+                        textSnippets.forEach(snippet => {
+                            snippetsHtml += `<div>${highlightSearchTerms(snippet.content, searchTerm)}</div>`;
+                        });
+                    }
+                    
+                    // Show tag snippets
+                    if (tagSnippets.length > 0) {
+                        snippetsHtml += '<div><strong>Tag matches:</strong></div>';
+                        // Remove duplicates by creating a Set of unique tag descriptions
+                        const uniqueTags = new Map();
+                        tagSnippets.forEach(snippet => {
+                            const key = `${snippet.label}: ${snippet.content}`;
+                            if (!uniqueTags.has(key)) {
+                                uniqueTags.set(key, snippet);
+                            }
+                        });
+                        
+                        uniqueTags.forEach(snippet => {
+                            const displayText = snippet.abbr ? 
+                                `${snippet.label}: ${snippet.content} (${snippet.abbr})` : 
+                                `${snippet.label}: ${snippet.content}`;
+                            snippetsHtml += `<div>${highlightSearchTerms(displayText, searchTerm)}</div>`;
+                        });
+                    }
+                    
+                    snippetsHtml += '</div>';
+                }
+                
+                item.innerHTML = `
+                    <strong>Session ${result.session}, Level ${result.level}</strong>
+                    <span class="search-result-count">(${result.count} matches)</span>
+                    ${snippetsHtml}
+                `;
+                
+                item.addEventListener('click', () => {
+                    // Update current values
+                    currentSession = result.session;
+                    currentLevel = result.level;
+                    
+                    // Update session dropdown
+                    document.getElementById('sessionSelect').value = result.session;
+                    
+                    // Enable level dropdown and populate it
+                    populateLevels(currentSession);
+                    
+                    // Set level dropdown after it gets populated
+                    document.getElementById('levelSelect').value = result.level;
+                    
+                    // Display the dialogue
+                    displayUtterances(currentSession, currentLevel, searchTerm);
+                    
+                    // Hide search results
+                    container.innerHTML = '';
+                    resultsSpan.textContent = '';
+                    
+                    // Scroll to utterances
+                    document.getElementById('utterances').scrollIntoView({ behavior: 'smooth' });
+                });
+                
+                container.appendChild(item);
+            });
+        }
+
+        function populateSessions() {
+            const sessionSel = document.getElementById('sessionSelect');
+            const sessions = [...new Set(data.map(d => d.session))].sort();
+            sessions.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                sessionSel.appendChild(opt);
+            });
+        }
+
+        function populateLevels(session) {
+            const levelSel = document.getElementById('levelSelect');
+            levelSel.innerHTML = '<option value="">-- choose level --</option>';
+            if (!session) { levelSel.disabled = true; return; }
+            const levels = [...new Set(data.filter(d => d.session === session).map(d => d.level))].sort();
+            levels.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l;
+                opt.textContent = l;
+                levelSel.appendChild(opt);
+            });
+            levelSel.disabled = false;
+        }
+
+        function displayUtterances(session, level, searchTerm = '') {
+            if (!session || !level) return;
+
+            const rows = data.filter(d => d.session === session && d.level === level)
+                             .sort((a, b) => timeToSeconds(a.start_time) - timeToSeconds(b.start_time));
+
+            if (isTimelineView) {
+                displayTimelineView(rows, searchTerm);
+            } else {
+                displayListView(rows, searchTerm);
+            }
+        }
+
+        function displayListView(rows, searchTerm) {
+            const container = document.getElementById('utterances');
+            container.innerHTML = '';
+
+            rows.forEach(r => {
+                const utteranceText = r.utterance || '';
+                const row = document.createElement('div');
+                row.className = `utterance speaker-${r.speaker.toLowerCase()}`;
+                
+                // Add timestamp
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'timeline-time';
+                timeDiv.textContent = r.start_time;
+                row.appendChild(timeDiv);
+                
+                // Add utterance text with proper wrapping
+                const textDiv = document.createElement('div');
+                textDiv.className = 'timeline-text';
+                
+                // Truncate very long text to prevent overflow
+                let displayText = utteranceText;
+                if (utteranceText.length > 100) {
+                    displayText = utteranceText.substring(0, 97) + '...';
+                }
+                
+                const highlightedText = highlightSearchTerms(displayText, searchTerm);
+                textDiv.innerHTML = highlightedText;
+                row.appendChild(textDiv);
+                
+                const tagsContainer = document.createElement('div');
+                tagsContainer.className = 'utterance-tags';
+                
+                const fields = [
+                    { value: r.communicative_status, type: 'comm' },
+                    { value: r.information_level, type: 'info' },
+                    { value: r.uncertainty, type: 'unc' },
+                    { value: r.utterance_type, type: 'utt' },
+                    { value: r.discursive_act, type: 'dis' }
+                ];
+                
+                fields.forEach(field => {
+                    const tagInfo = getTagInfo(field.value);
+                    if (tagInfo) {
+                        const tag = document.createElement('span');
+                        tag.className = 'tag';
+                        
+                        // Check if this tag matches the search term and highlight if so
+                        if (searchTerm && tagMatchesSearch(field.value, searchTerm)) {
+                            tag.innerHTML = highlightSearchTerms(tagInfo.abbr, searchTerm);
+                        } else {
+                            tag.textContent = tagInfo.abbr;
+                        }
+                        
+                        tag.setAttribute('title', tagInfo.full);
+                        setupTooltipListeners(tag);
+                        
+                        const category = field.type;
+                        if (categoryColors[category]) {
+                            tag.style.backgroundColor = categoryColors[category].bg;
+                            tag.style.color = categoryColors[category].text;
+                        } else {
+                            tag.style.backgroundColor = 'rgba(200, 200, 200, 0.8)';
+                            tag.style.color = '#333';
+                        }
+                        
+                        tagsContainer.appendChild(tag);
+                    }
+                });
+                
+                row.appendChild(tagsContainer);
+                container.appendChild(row);
+            });
+        }
+
+        function displayTimelineView(rows, searchTerm) {
+            const blueColumn = document.getElementById('blueColumn');
+            const orangeColumn = document.getElementById('orangeColumn');
+            
+            blueColumn.innerHTML = '';
+            orangeColumn.innerHTML = '';
+            
+            if (rows.length === 0) return;
+            
+            const startTime = timeToSeconds(rows[0].start_time);
+            const endTime = timeToSeconds(rows[rows.length - 1].end_time || rows[rows.length - 1].start_time);
+            const totalDuration = endTime - startTime;
+            const pixelsPerSecond = 80;
+            const containerHeight = Math.max(600, totalDuration * pixelsPerSecond);
+            
+            document.getElementById('timelineContainer').style.height = containerHeight + 'px';
+            
+            rows.forEach((r, index) => {
+                const utteranceText = r.utterance || '';
+                const startSeconds = timeToSeconds(r.start_time);
+                const endSeconds = timeToSeconds(r.end_time || r.start_time);
+                const duration = endSeconds - startSeconds;
+                
+                const top = ((startSeconds - startTime) / totalDuration) * containerHeight;
+                const height = Math.max(50, (duration / totalDuration) * containerHeight);
+                
+                const utterance = document.createElement('div');
+                utterance.className = `timeline-utterance ${r.speaker.toLowerCase()}`;
+                utterance.style.top = top + 'px';
+                utterance.style.height = height + 'px';
+                utterance.style.zIndex = index + 1;
+                
+                utterance.addEventListener('mouseenter', function() {
+                    this.style.zIndex = '100';
+                });
+                
+                utterance.addEventListener('mouseleave', function() {
+                    this.style.zIndex = (index + 1).toString();
+                });
+                
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'timeline-time';
+                timeDiv.textContent = r.start_time;
+                utterance.appendChild(timeDiv);
+                
+                const textDiv = document.createElement('div');
+                textDiv.className = 'timeline-text';
+                
+                let displayText = utteranceText;
+                if (utteranceText.length > 100) {
+                    displayText = utteranceText.substring(0, 97) + '...';
+                }
+                
+                const highlightedText = highlightSearchTerms(displayText, searchTerm);
+                textDiv.innerHTML = highlightedText;
+                utterance.appendChild(textDiv);
+                
+                const tagsContainer = document.createElement('div');
+                tagsContainer.className = 'timeline-tags';
+                
+                const fields = [
+                    { value: r.communicative_status, type: 'comm' },
+                    { value: r.information_level, type: 'info' },
+                    { value: r.uncertainty, type: 'unc' },
+                    { value: r.utterance_type, type: 'utt' },
+                    { value: r.discursive_act, type: 'dis' }
+                ];
+                
+        fields.forEach(field => {
+            const tagInfo = getTagInfo(field.value);
+            if (tagInfo) {
+                const tag = document.createElement('span');
+                tag.className = 'timeline-tag';
+                
+                // Check if this tag matches the search term and highlight if so
+                if (searchTerm && tagMatchesSearch(field.value, searchTerm)) {
+                    tag.innerHTML = highlightSearchTerms(tagInfo.abbr, searchTerm);
+                } else {
+                    tag.textContent = tagInfo.abbr;
+                }
+                
+                tag.setAttribute('title', tagInfo.full);
+                setupTooltipListeners(tag);
+                
+                const category = field.type;
+                if (categoryColors[category]) {
+                    tag.style.backgroundColor = categoryColors[category].bg;
+                    tag.style.color = categoryColors[category].text;
+                } else {
+                    tag.style.backgroundColor = 'rgba(200, 200, 200, 0.8)';
+                    tag.style.color = '#333';
+                }
+                
+                tagsContainer.appendChild(tag);
+            }
+        });
+                
+                utterance.appendChild(tagsContainer);
+                
+                if (r.speaker.toLowerCase() === 'blue') {
+                    blueColumn.appendChild(utterance);
+                } else {
+                    orangeColumn.appendChild(utterance);
+                }
+            });
+        }
+
+        // Event listeners
+        document.getElementById('sessionSelect').addEventListener('change', e => {
+            currentSession = e.target.value;
+            populateLevels(currentSession);
+            displayUtterances(currentSession, currentLevel, document.getElementById('searchInput').value);
+        });
+
+        document.getElementById('levelSelect').addEventListener('change', e => {
+            currentLevel = e.target.value;
+            displayUtterances(currentSession, currentLevel, document.getElementById('searchInput').value);
+        });
+
+        document.getElementById('searchInput').addEventListener('input', e => {
+            const searchTerm = e.target.value;
+            displaySearchResults(searchTerm);
+        });
+
+        document.getElementById('viewToggle').addEventListener('change', toggleView);
+
+        // Load and parse CSV
+        Papa.parse('combined_data.csv', {
+            header: true,
+            download: true,
+            skipEmptyLines: true,
+            complete: results => {
+                data = results.data;
+                populateSessions();
+            },
+            error: err => console.error('CSV load error:', err)
+        });
+    </script>
+</body>
+</html>
