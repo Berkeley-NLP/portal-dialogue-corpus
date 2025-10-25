@@ -63,7 +63,7 @@ h1 {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 5px 20px;
+    gap: 5px 40px;
 }
 
 #authors li {
@@ -512,4 +512,21 @@ input:checked + .toggle-slider:before {
         padding: 10px 20px;
         font-size: 0.9rem;
     }
+}
+
+/* YouTube timestamp link styling */
+.youtube-timestamp-link {
+    color: #ff0000;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.2s ease;
+}
+
+.youtube-timestamp-link:hover {
+    color: #cc0000;
+    text-decoration: underline;
+}
+
+.youtube-timestamp-link:visited {
+    color: #990000;
 }
