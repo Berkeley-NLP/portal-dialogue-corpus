@@ -742,14 +742,14 @@
                     document.getElementById('levelSelect').value = result.level;
                     
                     // Clear search input and results
-                    document.getElementById('searchInput').value = '';
+                    // document.getElementById('searchInput').value = '';
                     container.innerHTML = '';
                     resultsSpan.textContent = '';
                     
                     // Show content container and display the dialogue
                     const contentContainer = document.getElementById('contentContainer');
                     contentContainer.style.display = 'flex';
-                    displayUtterances(currentSession, currentLevel, '');
+                    displayUtterances(currentSession, currentLevel, searchTerm);
                 });
                 
                 container.appendChild(item);
@@ -781,8 +781,13 @@
             levelSel.disabled = false;
         }
 
+        function hideContentContainer() {
+            const contentContainer = document.getElementById('contentContainer');
+            contentContainer.style.display = 'none';
+        }
+
         function displayUtterances(session, level, searchTerm = '') {
-            if (!session || !level) return;
+            if (!session || !level) return hideContentContainer();
 
             const rows = data.filter(d => d.session === session && d.level === level)
                              .sort((a, b) => timeToSeconds(a.start_time) - timeToSeconds(b.start_time));
@@ -985,6 +990,7 @@
         // Event listeners
         document.getElementById('sessionSelect').addEventListener('change', e => {
             currentSession = e.target.value;
+            currentLevel = '';
             populateLevels(currentSession);
             displayUtterances(currentSession, currentLevel, document.getElementById('searchInput').value);
         });

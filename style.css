@@ -118,7 +118,7 @@ a:hover {
 #overview {
     max-width: 900px;
     width: 100%;
-    margin-top: 20px;
+    margin: 20px auto 0 auto;
 }
 
 #overview img {
@@ -254,6 +254,7 @@ input:checked + .toggle-slider:before {
     max-width: 800px;
     width: 80%;
     margin: 0 auto;
+    display: none;
 }
 
 .video-container {
