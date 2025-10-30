@@ -260,7 +260,7 @@ input:checked + .toggle-slider:before {
 .video-container {
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 1000;
     background: white;
     padding: 20px;
     border-radius: 8px;
@@ -473,7 +473,7 @@ input:checked + .toggle-slider:before {
 }
 
 .timeline-utterance:hover {
-    z-index: 50 !important;
+    z-index: 500 !important;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
