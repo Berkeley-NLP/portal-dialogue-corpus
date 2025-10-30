@@ -79,11 +79,20 @@
 
             <div id="searchResultsList" class="search-results"></div>
 
-            <div id="utterances"></div>
-            
-            <div id="timelineContainer" class="timeline-container">
-                <div class="timeline-column blue" id="blueColumn"></div>
-                <div class="timeline-column orange" id="orangeColumn"></div>
+            <div id="contentContainer" class="content-container">
+                <div id="videoContainer" class="video-container" style="display: none;">
+                    <h3 id="videoTitle">Video for Current Session/Level</h3>
+                    <iframe id="videoEmbed" width="100%" height="315" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+
+                <div id="utterancesContainer" class="utterances-container">
+                    <div id="utterances"></div>
+                    
+                    <div id="timelineContainer" class="timeline-container">
+                        <div class="timeline-column blue" id="blueColumn"></div>
+                        <div class="timeline-column orange" id="orangeColumn"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -275,18 +284,72 @@
             return youtubeVideoMapping[key] || null;
         }
 
-        // Function to convert timestamp to YouTube URL with time parameter
+        // Function to convert YouTube URL to embeddable format
+        function convertToEmbedUrl(youtubeUrl) {
+            if (!youtubeUrl) return null;
+            
+            // Extract video ID from various YouTube URL formats
+            const videoIdMatch = youtubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+            if (!videoIdMatch) return null;
+            
+            const videoId = videoIdMatch[1];
+            return `https://www.youtube.com/embed/${videoId}?enablejsapi=1`;
+        }
+
+        // Function to show embedded video for current session/level
+        function showEmbeddedVideo(session, level) {
+            const videoContainer = document.getElementById('videoContainer');
+            const videoEmbed = document.getElementById('videoEmbed');
+            const videoTitle = document.getElementById('videoTitle');
+            
+            const videoUrl = getYouTubeVideoUrl(session, level);
+            if (!videoUrl) {
+                videoContainer.style.display = 'none';
+                return;
+            }
+            
+            const embedUrl = convertToEmbedUrl(videoUrl);
+            if (!embedUrl) {
+                videoContainer.style.display = 'none';
+                return;
+            }
+            
+            videoEmbed.src = embedUrl;
+            videoTitle.textContent = `Video for Session ${session}, Level ${level}`;
+            videoContainer.style.display = 'block';
+        }
+
+        // Function to create timestamp link that seeks the embedded video
         function createYouTubeTimestampLink(timestamp, session, level) {
             const videoUrl = getYouTubeVideoUrl(session, level);
             if (!videoUrl) {
                 return timestamp; // Return plain timestamp if no video available
             }
 
-            // Convert timestamp to seconds for YouTube time parameter
+            // Convert timestamp to seconds
             const seconds = timeToSeconds(timestamp);
-            const youtubeUrl = `${videoUrl}&t=${Math.floor(seconds)}s`;
             
-            return `<a href="${youtubeUrl}" target="_blank" class="youtube-timestamp-link">${timestamp}</a>`;
+            // Create clickable timestamp that seeks the embedded video
+            return `<a href="javascript:void(0)" onclick="seekEmbeddedVideo(${seconds})" class="youtube-timestamp-link">${timestamp}</a>`;
+        }
+
+        // Function to seek the embedded video to a specific time
+        function seekEmbeddedVideo(seconds) {
+            const videoEmbed = document.getElementById('videoEmbed');
+            const videoContainer = document.getElementById('videoContainer');
+            
+            // If video is not visible, show it first
+            if (videoContainer.style.display === 'none') {
+                return;
+            }
+            
+            // Use postMessage to control the embedded YouTube player
+            videoEmbed.contentWindow.postMessage(
+                '{"event":"command","func":"seekTo","args":[' + seconds + ',true]}',
+                '*'
+            );
+            
+            // Since video is always visible when content is loaded, no need to scroll
         }
 
         // Custom tooltip functions
@@ -715,6 +778,9 @@
 
             const rows = data.filter(d => d.session === session && d.level === level)
                              .sort((a, b) => timeToSeconds(a.start_time) - timeToSeconds(b.start_time));
+
+            // Show embedded video for the selected session/level
+            showEmbeddedVideo(session, level);
 
             if (isTimelineView) {
                 displayTimelineView(rows, searchTerm);
