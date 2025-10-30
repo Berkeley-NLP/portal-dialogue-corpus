@@ -82,7 +82,7 @@
             <div id="contentContainer" class="content-container">
                 <div id="videoContainer" class="video-container" style="display: none;">
                     <h3 id="videoTitle">Video for Current Session/Level</h3>
-                    <iframe id="videoEmbed" width="100%" height="315" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    <iframe id="videoEmbed" width="100%" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                 </div>
 
                 <div id="utterancesContainer" class="utterances-container">
@@ -648,13 +648,21 @@
             const container = document.getElementById('searchResultsList');
             const resultsSpan = document.getElementById('searchResults');
             const utterancesContainer = document.getElementById('utterances');
+            const contentContainer = document.getElementById('contentContainer');
             
             if (!searchTerm.trim()) {
                 container.innerHTML = '';
                 resultsSpan.textContent = '';
                 utterancesContainer.innerHTML = '';
+                // Show content container when search is cleared
+                if (currentSession && currentLevel) {
+                    contentContainer.style.display = 'flex';
+                }
                 return;
             }
+
+            // Hide content container when search is active
+            contentContainer.style.display = 'none';
 
             const results = searchAcrossAllData(searchTerm);
             
@@ -733,15 +741,15 @@
                     // Set level dropdown after it gets populated
                     document.getElementById('levelSelect').value = result.level;
                     
-                    // Display the dialogue
-                    displayUtterances(currentSession, currentLevel, searchTerm);
-                    
-                    // Hide search results
+                    // Clear search input and results
+                    document.getElementById('searchInput').value = '';
                     container.innerHTML = '';
                     resultsSpan.textContent = '';
                     
-                    // Scroll to utterances
-                    document.getElementById('utterances').scrollIntoView({ behavior: 'smooth' });
+                    // Show content container and display the dialogue
+                    const contentContainer = document.getElementById('contentContainer');
+                    contentContainer.style.display = 'flex';
+                    displayUtterances(currentSession, currentLevel, '');
                 });
                 
                 container.appendChild(item);
@@ -779,7 +787,9 @@
             const rows = data.filter(d => d.session === session && d.level === level)
                              .sort((a, b) => timeToSeconds(a.start_time) - timeToSeconds(b.start_time));
 
-            // Show embedded video for the selected session/level
+            // Show content container and embedded video for the selected session/level
+            const contentContainer = document.getElementById('contentContainer');
+            contentContainer.style.display = 'flex';
             showEmbeddedVideo(session, level);
 
             if (isTimelineView) {
