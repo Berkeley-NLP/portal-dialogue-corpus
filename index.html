@@ -39,6 +39,9 @@
                 border-radius: 8px;
                 cursor: pointer;
                 transition: all 0.2s ease;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
             }
             .clip-card:hover {
                 background: #e9ecef;
@@ -57,11 +60,13 @@
             .clip-title {
                 font-weight: bold;
                 font-size: 1.1rem;
-                margin-bottom: 8px;
                 color: #2c3e50;
             }
             .clip-card.active .clip-title {
                 color: white;
+            }
+            .clip-spacer {
+                flex-grow: 1;
             }
             .clip-description {
                 font-size: 0.9rem;
@@ -76,9 +81,20 @@
                 font-size: 0.85rem;
                 color: #6c757d;
                 margin: 4px 0;
+                display: inline-block;
+            }
+            .clip-meta-container {
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+            }
+            .clip-meta-left {
+                flex: 2;
+            }
+            .clip-meta-right {
+                text-align: right;
             }
             .clip-duration {
-                display: inline-block;
                 padding: 3px 8px;
                 background: rgba(0, 123, 255, 0.1);
                 border-radius: 4px;
@@ -283,9 +299,16 @@
                     card.innerHTML = `
                         <div class="clip-title">${clip.Relevance}</div>
                         ${description ? `<div class="clip-description">${description}</div>` : ''}
-                        <div class="clip-meta">Session ${clip.Session}, Course ${clip.Course}, Level ${clip.Level}</div>
-                        <div class="clip-meta">${clip['Timestamp Start']} - ${clip['Timestamp End']}</div>
-                        <div class="clip-duration">${formatDuration(duration)}</div>
+                        <div class="clip-spacer"></div>
+                        <div class="clip-meta-container">
+                            <div class="clip-meta-left">
+                                <div class="clip-meta">Session ${clip.Session}, Course ${clip.Course}, Level ${clip.Level}</div>
+                                <div class="clip-meta">(${clip['Timestamp Start']} - ${clip['Timestamp End']})</div>
+                            </div>
+                            <div class="clip-meta-right">
+                                <div class="clip-duration">${formatDuration(duration)}</div>
+                            </div>
+                        </div>
                     `;
 
                     card.addEventListener('click', () => loadClip(index));
