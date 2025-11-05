@@ -7,6 +7,116 @@
         <link rel="icon" type="image/x-icon" href="images/favicon.ico">
         <!-- Import Font Awesome -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <!-- Papa Parse for CSV parsing -->
+        <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+        <!-- Video Transcript Viewer Component -->
+        <script src="VideoTranscriptViewer.js"></script>
+        <style>
+            .clips-section {
+                max-width: 900px;
+                width: 100%;
+                margin: 40px auto;
+                padding: 30px;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .clips-section h2 {
+                font-size: 2rem;
+                margin-bottom: 20px;
+                color: #2c3e50;
+            }
+            .clips-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 15px;
+                margin-bottom: 30px;
+            }
+            .clip-card {
+                padding: 15px;
+                background: #f8f9fa;
+                border: 2px solid #dee2e6;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            .clip-card:hover {
+                background: #e9ecef;
+                border-color: #007bff;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+            .clip-card.active {
+                background: #007bff;
+                color: white;
+                border-color: #0056b3;
+            }
+            .clip-card.active .clip-meta {
+                color: rgba(255, 255, 255, 0.9);
+            }
+            .clip-title {
+                font-weight: bold;
+                font-size: 1.1rem;
+                margin-bottom: 8px;
+                color: #2c3e50;
+            }
+            .clip-card.active .clip-title {
+                color: white;
+            }
+            .clip-description {
+                font-size: 0.9rem;
+                color: #495057;
+                margin: 8px 0;
+                line-height: 1.4;
+            }
+            .clip-card.active .clip-description {
+                color: rgba(255, 255, 255, 0.95);
+            }
+            .clip-meta {
+                font-size: 0.85rem;
+                color: #6c757d;
+                margin: 4px 0;
+            }
+            .clip-duration {
+                display: inline-block;
+                padding: 3px 8px;
+                background: rgba(0, 123, 255, 0.1);
+                border-radius: 4px;
+                font-size: 0.8rem;
+                margin-top: 5px;
+            }
+            .clip-card.active .clip-duration {
+                background: rgba(255, 255, 255, 0.2);
+            }
+            #clipViewer {
+                margin-top: 20px;
+            }
+            .viewer-controls {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 15px;
+                flex-wrap: wrap;
+            }
+            .viewer-controls button {
+                padding: 8px 16px;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                transition: background 0.2s;
+            }
+            .viewer-controls button:hover {
+                background: #0056b3;
+            }
+            .viewer-controls button.secondary {
+                background: #6c757d;
+            }
+            .viewer-controls button.secondary:hover {
+                background: #545b62;
+            }
+        </style>
     </head>
     <body>
         <div id="main">
@@ -66,7 +176,192 @@
                 We share transcripts of dialogues and demo files, which can be used to recover the underlying game state, on <a href="https://huggingface.co/datasets/Berkeley-NLP/portal2">Hugging Face</a>. We also share video recordings of each game on our <a href="https://www.youtube.com/@BerkeleyNLPSuhrGroup">YouTube channel</a>. We cannot directly share audio recordings due to an IRB agreement, but you can request access at <a href="https://forms.gle/5ZJ9EBVSz6bJx9559">this form</a>.
             </p>
         </div>
+
+        <div class="clips-section">
+            <h2>Example Clips</h2>
+            <p style="margin-bottom: 20px;">
+                Select a clip below to view the corresponding video and transcript. These clips highlight key examples of collaborative dialogue from our paper.
+                You can also explore the full dataset on the <a href="explorer.html">Data Explorer</a>.
+            </p>
+
+            <div class="clips-grid" id="clipsGrid">
+                <!-- Clips will be loaded dynamically from clips.tsv -->
+            </div>
+
+            <div class="viewer-controls" id="viewerControls" style="display: none;">
+                <button id="toggleViewBtn">Toggle Timeline View</button>
+                <button id="closeViewerBtn" class="secondary">Close Viewer</button>
+            </div>
+
+            <div id="clipViewer"></div>
         </div>
+        </div>
+
+        <script>
+            let clipViewer = null;
+            let clipsData = [];
+            let currentClipIndex = -1;
+            let dataLoaded = false;
+            let dataLoadPromise = null;
+
+            // Initialize the VideoTranscriptViewer component
+            function initClipViewer() {
+                if (clipViewer) {
+                    return dataLoadPromise; // Already initialized
+                }
+
+                const container = document.getElementById('clipViewer');
+                clipViewer = new VideoTranscriptViewer({
+                    containerElement: container
+                });
+                window.videoTranscriptViewer = clipViewer;
+
+                // Load the dialogue data and store the promise
+                dataLoadPromise = clipViewer.loadData('combined_data.csv').then(() => {
+                    console.log('Dialogue data loaded');
+                    dataLoaded = true;
+                }).catch(err => {
+                    console.error('Error loading dialogue data:', err);
+                });
+
+                return dataLoadPromise;
+            }
+
+            // Parse timestamp to calculate duration
+            function parseTimestamp(timestamp) {
+                const parts = timestamp.split(':');
+                if (parts.length === 3) {
+                    return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+                } else if (parts.length === 2) {
+                    return parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+                }
+                return 0;
+            }
+
+            // Format seconds as MM:SS
+            function formatDuration(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            // Load and parse clips.tsv
+            function loadClips() {
+                Papa.parse('clips.tsv', {
+                    download: true,
+                    header: true,
+                    delimiter: '\t',
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        clipsData = results.data;
+                        displayClips();
+                    },
+                    error: function(err) {
+                        console.error('Error loading clips.tsv:', err);
+                    }
+                });
+            }
+
+            // Display clips as cards
+            function displayClips() {
+                const grid = document.getElementById('clipsGrid');
+                grid.innerHTML = '';
+
+                clipsData.forEach((clip, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'clip-card';
+                    card.dataset.index = index;
+
+                    // Calculate duration
+                    const startSec = parseTimestamp(clip['Timestamp Start']);
+                    const endSec = parseTimestamp(clip['Timestamp End']);
+                    const duration = endSec - startSec;
+
+                    // Get description if available
+                    const description = clip.Description || '';
+
+                    card.innerHTML = `
+                        <div class="clip-title">${clip.Relevance}</div>
+                        ${description ? `<div class="clip-description">${description}</div>` : ''}
+                        <div class="clip-meta">Session ${clip.Session}, Course ${clip.Course}, Level ${clip.Level}</div>
+                        <div class="clip-meta">${clip['Timestamp Start']} - ${clip['Timestamp End']}</div>
+                        <div class="clip-duration">${formatDuration(duration)}</div>
+                    `;
+
+                    card.addEventListener('click', () => loadClip(index));
+                    grid.appendChild(card);
+                });
+            }
+
+            // Load a specific clip
+            async function loadClip(index) {
+                // Initialize viewer if needed and wait for data to load
+                const loadPromise = initClipViewer();
+                if (!dataLoaded) {
+                    await loadPromise;
+                }
+
+                const clip = clipsData[index];
+                currentClipIndex = index;
+
+                // Update active state
+                document.querySelectorAll('.clip-card').forEach((card, i) => {
+                    if (i === index) {
+                        card.classList.add('active');
+                    } else {
+                        card.classList.remove('active');
+                    }
+                });
+
+                // Format session and level
+                const session = clip.Session.toString().padStart(2, '0');
+                const level = `Course${clip.Course}_Level${clip.Level}`;
+
+                // Display the clip
+                clipViewer.displayContent(
+                    session,
+                    level,
+                    '',
+                    clip['Timestamp Start'],
+                    clip['Timestamp End']
+                );
+
+                // Show controls
+                document.getElementById('viewerControls').style.display = 'flex';
+
+                // Scroll to viewer
+                setTimeout(() => {
+                    document.getElementById('clipViewer').scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest'
+                    });
+                }, 100);
+            }
+
+            // Event listeners
+            document.addEventListener('DOMContentLoaded', () => {
+                loadClips();
+
+                document.getElementById('toggleViewBtn').addEventListener('click', () => {
+                    if (clipViewer) {
+                        clipViewer.toggleView();
+                    }
+                });
+
+                document.getElementById('closeViewerBtn').addEventListener('click', () => {
+                    if (clipViewer) {
+                        clipViewer.contentContainer.style.display = 'none';
+                        document.getElementById('viewerControls').style.display = 'none';
+
+                        // Remove active state from all cards
+                        document.querySelectorAll('.clip-card').forEach(card => {
+                            card.classList.remove('active');
+                        });
+                        currentClipIndex = -1;
+                    }
+                });
+            });
+        </script>
 
     </body>
 </html>
