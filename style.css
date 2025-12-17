@@ -149,6 +149,10 @@ a:hover {
     width: 100%;
 }
 
+.data-explorer-container h2 {
+    margin-top: 30px;
+}
+
 .controls-row {
     display: flex;
     align-items: center;
@@ -245,6 +249,11 @@ input:checked + .toggle-slider:before {
 .search-container label {
     font-weight: bold;
     color: #333;
+    margin-right: 8px;
+}
+
+#searchInput {
+    margin: 0 10px;
 }
 
 .content-container {
@@ -438,6 +447,11 @@ input:checked + .toggle-slider:before {
     display: block;
 }
 
+/* Global toggle to hide embedded video */
+body.hide-video .video-container {
+    display: none !important;
+}
+
 .timeline-column {
     position: absolute;
     top: 20px;
@@ -464,7 +478,7 @@ input:checked + .toggle-slider:before {
     box-sizing: border-box;
     border-left: 4px solid;
     overflow: hidden;
-    min-height: 40px;
+    min-height: 60px;
     z-index: 1;
     transition: z-index 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);

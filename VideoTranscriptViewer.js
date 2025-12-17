@@ -788,9 +788,10 @@ class VideoTranscriptViewer {
         const endTime = this._timeToSeconds(rows[rows.length - 1].end_time || rows[rows.length - 1].start_time);
         const totalDuration = endTime - startTime;
         const pixelsPerSecond = 80;
-        const containerHeight = Math.max(600, totalDuration * pixelsPerSecond);
+        const layoutHeight = Math.max(600, totalDuration * pixelsPerSecond);
+        const visualHeight = layoutHeight + 80; // extra space so final utterance stays inside container
 
-        this.timelineContainer.style.height = containerHeight + 'px';
+        this.timelineContainer.style.height = visualHeight + 'px';
 
         rows.forEach((r, index) => {
             const utteranceText = r.utterance || '';
@@ -798,8 +799,8 @@ class VideoTranscriptViewer {
             const endSeconds = this._timeToSeconds(r.end_time || r.start_time);
             const duration = endSeconds - startSeconds;
 
-            const top = ((startSeconds - startTime) / totalDuration) * containerHeight;
-            const height = Math.max(50, (duration / totalDuration) * containerHeight);
+            const top = ((startSeconds - startTime) / totalDuration) * layoutHeight;
+            const height = Math.max(50, (duration / totalDuration) * layoutHeight);
 
             const utterance = document.createElement('div');
             utterance.className = `timeline-utterance ${r.speaker.toLowerCase()}`;

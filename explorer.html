@@ -71,6 +71,14 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
+
+                <div class="toggle-container">
+                    <span>Show video</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="videoToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
             </div>
 
             <div class="search-container">
@@ -135,6 +143,14 @@
         function toggleView() {
             if (videoTranscriptViewer) {
                 videoTranscriptViewer.toggleView();
+            }
+        }
+
+        function toggleVideo(show) {
+            if (show) {
+                document.body.classList.remove('hide-video');
+            } else {
+                document.body.classList.add('hide-video');
             }
         }
 
@@ -455,8 +471,15 @@
 
         document.getElementById('viewToggle').addEventListener('change', toggleView);
 
+        document.getElementById('videoToggle').addEventListener('change', e => {
+            toggleVideo(e.target.checked);
+        });
+
         // Initialize the viewer and load CSV data
         initViewer();
+
+        // Hide video by default
+        toggleVideo(false);
 
         Papa.parse('combined_data.csv', {
             header: true,
