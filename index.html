@@ -132,6 +132,37 @@
             .viewer-controls button.secondary:hover {
                 background: #545b62;
             }
+            .data-links-table {
+                width: 100%;
+                margin: 10px 0 0 0;
+                border-collapse: collapse;
+                border: 1px solid #dee2e6;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .data-links-table td {
+                padding: 6px 8px;
+                vertical-align: top;
+                border: 1px solid #dee2e6;
+            }
+            .data-links-left {
+                font-weight: bold;
+                white-space: nowrap;
+                padding-right: 24px;
+            }
+            .data-links-right {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 1.5rem;
+            }
+            .data-links-right a {
+                text-decoration: none;
+                color: #007bff;
+            }
+            .data-links-right a:hover {
+                text-decoration: underline;
+            }
         </style>
     </head>
     <body>
@@ -189,8 +220,52 @@
             <br/>
             <p>
                 <b>The Corpus&nbsp;&nbsp;&nbsp;</b>
-                We share transcripts of dialogues and demo files, which can be used to recover the underlying game state, on <a href="https://huggingface.co/datasets/Berkeley-NLP/portal2">Hugging Face</a>. We also share video recordings of each game on our <a href="https://www.youtube.com/@BerkeleyNLPSuhrGroup">YouTube channel</a>. We cannot directly share audio recordings due to an IRB agreement, but you can request access at <a href="https://forms.gle/5ZJ9EBVSz6bJx9559">this form</a>.
+                <!-- We share transcripts of dialogues and demo files, which can be used to recover the underlying game state, on <a href="https://huggingface.co/datasets/Berkeley-NLP/portal2">Hugging Face</a>. We also share video recordings of each game on our <a href="https://www.youtube.com/@BerkeleyNLPSuhrGroup">YouTube channel</a>. We cannot directly share audio recordings due to an IRB agreement, but you can request access at <a href="https://forms.gle/5ZJ9EBVSz6bJx9559">this form</a>. -->
+                We share gameplay data, videos, audio, and transcripts at the links below:
             </p>
+            <table class="data-links-table">
+                <tbody>
+                    <tr>
+                        <td class="data-links-left">Game data (i.e., demo files)</td>
+                        <td class="data-links-right">
+                            <a href="https://huggingface.co/datasets/Berkeley-NLP/portal2/tree/main/demo_files">Hugging Face</a>
+                            <a href="https://portal-dialogue-corpus.s3.amazonaws.com/public/demo_files.zip">Download</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="data-links-left">Video (without audio)</td>
+                        <td class="data-links-right">
+                            <a href="https://www.youtube.com/@PortalDialogueCorpus">YouTube (stitched)</a>
+                            <a href="https://portal-dialogue-corpus.s3.amazonaws.com/public/split_videos.zip">Download (split)</a>
+                            <a href="https://portal-dialogue-corpus.s3.amazonaws.com/public/stitched_videos.zip">Download (stitched)</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="data-links-left">Audio</td>
+                        <td class="data-links-right">
+                            <a href="https://forms.gle/5ZJ9EBVSz6bJx9559">Fill out this form to request access</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="data-links-left">Transcripts</td>
+                        <td class="data-links-right">
+                            <a href="https://berkeley-nlp.github.io/portal-dialogue-corpus/explorer.html">Data Explorer</a>
+                            <a href="https://huggingface.co/datasets/Berkeley-NLP/portal2/tree/main/transcripts">Hugging Face</a>
+                            <a href="https://portal-dialogue-corpus.s3.amazonaws.com/public/transcripts.zip">Download</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="data-links-left">Annotations</td>
+                        <td class="data-links-right">
+                            <a href="https://berkeley-nlp.github.io/portal-dialogue-corpus/explorer.html">Data Explorer</a>
+                            <a href="https://huggingface.co/datasets/Berkeley-NLP/portal2/tree/main/transcripts">Hugging Face</a>
+                            <a href="https://portal-dialogue-corpus.s3.amazonaws.com/public/annotated_transcripts.zip">Download</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <br/>
+            <p>Game data is stored in the <a href="https://developer.valvesoftware.com/wiki/DEM_(file_format)">Source demo file format</a>, which can be used to recover the underlying game state. Video recordings are available in two formats: stitched (i.e., both perspectives in a single video) and split (i.e., one player's perspective per video). We cannot directly share audio data due to an IRB agreement, but you can request access <a href="https://forms.gle/5ZJ9EBVSz6bJx9559">here</a>.</p>
         </div>
 
         <div class="clips-section">
